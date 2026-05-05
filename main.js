@@ -3,14 +3,15 @@ let currentItems = [];
 let cart = [];
 let myList = [];
 let isAZ = true;
+let currentView = "home";
 
 const container = document.getElementById("items-container");
 const searchInput = document.getElementById("search");
 const sortBtn = document.getElementById("sortBtn");
 const cartIcon = document.getElementById("cartIcon");
 const listIcon = document.getElementById("listIcon");
+const homeBtn = document.getElementById("homeBtn");
 
-// 🔄 Fetch products from API
 async function fetchProducts() {
   try {
     const response = await fetch("https://dummyjson.com/products/category/groceries");
@@ -18,7 +19,6 @@ async function fetchProducts() {
 
     items = data.products;
     currentItems = items;
-
     renderItems(currentItems);
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -26,13 +26,11 @@ async function fetchProducts() {
   }
 }
 
-// 🔢 Update cart/list counts
 function updateCounts() {
   cartIcon.textContent = `🛒 Cart (${cart.length})`;
   listIcon.textContent = `☰ My List (${myList.length})`;
 }
 
-// 🧱 Render items
 function renderItems(list) {
   container.innerHTML = "";
 
@@ -50,31 +48,77 @@ function renderItems(list) {
       <h3>${item.title}</h3>
       <p>${item.description}</p>
       <p><strong>Price:</strong> $${item.price}</p>
-      <button class="cart-btn">Add to Cart</button>
-      <button class="list-btn">My List</button>
+
+      ${
+        currentView === "home"
+          ? `
+            <button class="cart-btn">Add to Cart</button>
+            <button class="list-btn">My List</button>
+          `
+          : `
+            <label>
+              Qty:
+              <input class="qty-input" type="number" min="1" value="${item.qty || 1}">
+            </label>
+            <button class="remove-btn">Remove</button>
+          `
+      }
     `;
 
-    // ➕ Add to Cart
-    div.querySelector(".cart-btn").addEventListener("click", () => {
-      cart.push(item);
-      updateCounts();
-      alert(`${item.title} added to cart!`);
-    });
+    if (currentView === "home") {
+      div.querySelector(".cart-btn").addEventListener("click", () => {
+        const existingItem = cart.find(product => product.id === item.id);
 
-    // 📌 Add to My List
-    div.querySelector(".list-btn").addEventListener("click", () => {
-      myList.push(item);
-      updateCounts();
-      alert(`${item.title} added to your list!`);
-    });
+        if (existingItem) {
+          existingItem.qty += 1;
+        } else {
+          cart.push({ ...item, qty: 1 });
+        }
+
+        updateCounts();
+        alert(`${item.title} added to cart!`);
+      });
+
+      div.querySelector(".list-btn").addEventListener("click", () => {
+        const existingItem = myList.find(product => product.id === item.id);
+
+        if (existingItem) {
+          existingItem.qty += 1;
+        } else {
+          myList.push({ ...item, qty: 1 });
+        }
+
+        updateCounts();
+        alert(`${item.title} added to your list!`);
+      });
+    } else {
+      div.querySelector(".qty-input").addEventListener("change", (e) => {
+        item.qty = Number(e.target.value);
+      });
+
+      div.querySelector(".remove-btn").addEventListener("click", () => {
+        if (currentView === "cart") {
+          cart = cart.filter(product => product.id !== item.id);
+          currentItems = cart;
+        }
+
+        if (currentView === "list") {
+          myList = myList.filter(product => product.id !== item.id);
+          currentItems = myList;
+        }
+
+        updateCounts();
+        renderItems(currentItems);
+      });
+    }
 
     container.appendChild(div);
   });
 }
 
-// 🔍 Search
 searchInput.addEventListener("input", () => {
   const value = searchInput.value.toLowerCase();
+  currentView = "home";
 
   currentItems = items.filter(item =>
     item.title.toLowerCase().includes(value) ||
@@ -84,7 +128,6 @@ searchInput.addEventListener("input", () => {
   renderItems(currentItems);
 });
 
-// 🔤 Sort (A ↔ Z) — FIXED
 sortBtn.addEventListener("click", () => {
   currentItems = [...currentItems].sort((a, b) => {
     return isAZ
@@ -98,18 +141,26 @@ sortBtn.addEventListener("click", () => {
   isAZ = !isAZ;
 });
 
-// 🛒 Show Cart
 cartIcon.addEventListener("click", () => {
+  currentView = "cart";
   currentItems = cart;
+  searchInput.value = "";
   renderItems(currentItems);
 });
 
-// 📋 Show My List
 listIcon.addEventListener("click", () => {
+  currentView = "list";
   currentItems = myList;
+  searchInput.value = "";
   renderItems(currentItems);
 });
 
-// 🚀 Initialize
+homeBtn.addEventListener("click", () => {
+  currentView = "home";
+  currentItems = items;
+  searchInput.value = "";
+  renderItems(currentItems);
+});
+
 fetchProducts();
 updateCounts();
