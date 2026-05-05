@@ -1,4 +1,5 @@
 let items = [];
+let currentItems = [];
 let cart = [];
 let myList = [];
 let isAZ = true;
@@ -9,26 +10,36 @@ const sortBtn = document.getElementById("sortBtn");
 const cartIcon = document.getElementById("cartIcon");
 const listIcon = document.getElementById("listIcon");
 
+// 🔄 Fetch products from API
 async function fetchProducts() {
   try {
     const response = await fetch("https://dummyjson.com/products/category/groceries");
     const data = await response.json();
 
     items = data.products;
-    renderItems(items);
+    currentItems = items;
+
+    renderItems(currentItems);
   } catch (error) {
     console.error("Error fetching data:", error);
     container.innerHTML = "<p>Failed to load grocery data.</p>";
   }
 }
 
+// 🔢 Update cart/list counts
 function updateCounts() {
   cartIcon.textContent = `🛒 Cart (${cart.length})`;
   listIcon.textContent = `☰ My List (${myList.length})`;
 }
 
+// 🧱 Render items
 function renderItems(list) {
   container.innerHTML = "";
+
+  if (list.length === 0) {
+    container.innerHTML = "<p>No items found.</p>";
+    return;
+  }
 
   list.forEach(item => {
     const div = document.createElement("div");
@@ -43,12 +54,14 @@ function renderItems(list) {
       <button class="list-btn">My List</button>
     `;
 
+    // ➕ Add to Cart
     div.querySelector(".cart-btn").addEventListener("click", () => {
       cart.push(item);
       updateCounts();
       alert(`${item.title} added to cart!`);
     });
 
+    // 📌 Add to My List
     div.querySelector(".list-btn").addEventListener("click", () => {
       myList.push(item);
       updateCounts();
@@ -59,37 +72,44 @@ function renderItems(list) {
   });
 }
 
+// 🔍 Search
 searchInput.addEventListener("input", () => {
   const value = searchInput.value.toLowerCase();
 
-  const filtered = items.filter(item =>
+  currentItems = items.filter(item =>
     item.title.toLowerCase().includes(value) ||
     item.description.toLowerCase().includes(value)
   );
 
-  renderItems(filtered);
+  renderItems(currentItems);
 });
 
+// 🔤 Sort (A ↔ Z) — FIXED
 sortBtn.addEventListener("click", () => {
-  const sorted = [...items].sort((a, b) => {
+  currentItems = [...currentItems].sort((a, b) => {
     return isAZ
       ? a.title.localeCompare(b.title)
       : b.title.localeCompare(a.title);
   });
 
-  renderItems(sorted);
+  renderItems(currentItems);
 
   sortBtn.textContent = isAZ ? "Sort: Z → A" : "Sort: A → Z";
   isAZ = !isAZ;
 });
 
+// 🛒 Show Cart
 cartIcon.addEventListener("click", () => {
-  renderItems(cart);
+  currentItems = cart;
+  renderItems(currentItems);
 });
 
+// 📋 Show My List
 listIcon.addEventListener("click", () => {
-  renderItems(myList);
+  currentItems = myList;
+  renderItems(currentItems);
 });
 
+// 🚀 Initialize
 fetchProducts();
 updateCounts();
